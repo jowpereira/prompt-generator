@@ -125,7 +125,7 @@ def main():
     st.markdown("""
     <div class="prompt-header">
     Sistema inteligente para criar prompts bem estruturados para IA generativa,
-    seguindo as melhores práticas de engenharia de prompt.
+seguindo as melhores práticas de engenharia de prompt.
     </div>
     """, unsafe_allow_html=True)
     
@@ -144,15 +144,105 @@ def main():
     with tab1:
         # Entrada do usuário
         with st.form("prompt_form"):
-            user_input = st.text_area(
-                "Descreva o prompt que você deseja gerar:",
-                height=150,
-                placeholder="Ex: Crie um prompt para gerar histórias de ficção científica com protagonistas não-humanos, no formato Markdown, com tom aventureiro..."
-            )
+            col1, col2 = st.columns([3, 2])
+            with col1:
+                user_input = st.text_area("Descreva o prompt:", height=200)
+            with col2:
+                st.markdown("### Análise em tempo real")
+                if user_input:
+                    # Analisar a entrada em tempo real
+                    with st.container():
+                        # Detectar formato
+                        formato_detectado = "Markdown"  # Padrão
+                        if "formato json" in user_input.lower() or " json" in user_input.lower() or "\njson" in user_input.lower():
+                            formato_detectado = "JSON"
+                        elif "formato xml" in user_input.lower() or " xml" in user_input.lower() or "\nxml" in user_input.lower():
+                            formato_detectado = "XML"
+                        elif "formato markdown" in user_input.lower() or " markdown" in user_input.lower() or "\nmarkdown" in user_input.lower():
+                            formato_detectado = "Markdown"
+                        
+                        # Detectar objetivo
+                        objetivo = ""
+                        if "criar" in user_input.lower() or "gerar" in user_input.lower() or "produzir" in user_input.lower() or "desenvolver" in user_input.lower():
+                            palavras = user_input.lower().split()
+                            idx = -1
+                            for i, palavra in enumerate(palavras):
+                                if palavra in ["criar", "gerar", "produzir", "desenvolver"]:
+                                    idx = i
+                                    break
+                            if idx >= 0 and idx + 1 < len(palavras):
+                                objetivo = " ".join(user_input.split()[idx:idx+15])  # Capturar mais palavras e preservar maiúsculas/minúsculas
+                        
+                        # Detectar tom
+                        tons = ["formal", "informal", "profissional", "casual", "técnico", 
+                               "amigável", "sério", "divertido", "aventureiro", "neutro"]
+                        tom_detectado = next((tom for tom in tons if tom in user_input.lower()), "")
+                        
+                        # Detectar restrições
+                        restricoes = []
+                        if "palavras" in user_input.lower() or "caracteres" in user_input.lower():
+                            for palavra in user_input.lower().split():
+                                if palavra.isdigit():
+                                    num = palavra
+                                    idx = user_input.lower().find(num)
+                                    if idx >= 0:
+                                        contexto = user_input[max(0, idx-30):min(len(user_input), idx+30)]
+                                        if "palavras" in contexto:
+                                            restricoes.append(f"Limite de {num} palavras")
+                                        elif "caracteres" in contexto:
+                                            restricoes.append(f"Limite de {num} caracteres")
+                        
+                        # Mostrar resultados da análise
+                        st.markdown("**Elementos detectados:**")
+                        
+                        col_a, col_b = st.columns(2)
+                        with col_a:
+                            st.markdown(f"🎯 **Objetivo:** {objetivo or 'Não detectado'}")
+                            st.markdown(f"📝 **Formato:** {formato_detectado}")
+                        with col_b:
+                            st.markdown(f"🔊 **Tom:** {tom_detectado or 'Não detectado'}")
+                            st.markdown(f"⚠️ **Restrições:** {', '.join(restricoes) or 'Não detectadas'}")
+                        
+                        # Avaliação da qualidade
+                        st.divider()
+                        qualidade = 0
+                        sugestoes = []
+                        
+                        if len(user_input) < 50:
+                            qualidade = 1
+                            sugestoes.append("Adicione mais detalhes sobre o que deseja")
+                        elif len(user_input) < 100:
+                            qualidade = 2
+                        else:
+                            qualidade = 3
+                            
+                        if not objetivo:
+                            qualidade = min(qualidade, 2)
+                            sugestoes.append("Especifique claramente o objetivo do prompt")
+                            
+                        if not tom_detectado:
+                            sugestoes.append("Mencione o tom desejado (formal, técnico, etc.)")
+                            
+                        if not restricoes:
+                            sugestoes.append("Adicione restrições como limite de palavras")
+                        
+                        # Exibir qualidade e sugestões
+                        qual_texto = ["Básico", "Bom", "Excelente"][qualidade-1]
+                        st.markdown(f"**Qualidade do prompt:** {qual_texto}")
+                        
+                        # Barra de progresso da qualidade
+                        st.progress(qualidade/3)
+                        
+                        if sugestoes:
+                            st.markdown("**Sugestões para melhorar:**")
+                            for sug in sugestoes:
+                                st.markdown(f"- {sug}")
+                else:
+                    st.info("Digite sua solicitação para ver a análise em tempo real.")
             
             # Opções avançadas
-            with st.expander("⚙️ Opções avançadas", expanded=False):
-                cols = st.columns(3)
+            with st.expander("⚙️ Opções avançadas"):
+                cols = st.columns(5)
                 with cols[0]:
                     formato_padrao = st.selectbox(
                         "Formato padrão:",
@@ -172,6 +262,22 @@ def main():
                         value=True,
                         help="Utiliza um pipeline sequencial mais confiável em vez do grafo de processamento"
                     )
+                with cols[3]:
+                    modelo = st.selectbox(
+                        "Modelo LLM:",
+                        options=["GPT-4o-mini", "GPT-4o", "Claude-3-Sonnet", "Gemini-Pro"],
+                        index=0,
+                        help="Escolha o modelo de linguagem para geração"
+                    )
+                with cols[4]:
+                    temperatura = st.slider(
+                        "Temperatura:",
+                        min_value=0.0,
+                        max_value=1.0,
+                        value=0.0,
+                        step=0.1,
+                        help="Valores mais altos = mais criatividade, valores menores = mais precisão"
+                    )
             
             # Botão de submissão com estilo personalizado
             submit_col1, submit_col2 = st.columns([3, 1])
@@ -186,7 +292,9 @@ def main():
                 st.session_state.formato_padrao = formato_padrao
                 st.session_state.mostrar_logs = mostrar_logs
                 st.session_state.usar_pipeline = usar_pipeline
-    
+                st.session_state.modelo = modelo
+                st.session_state.temperatura = temperatura
+
         # Processamento quando o formulário é enviado
         if submit_button and user_input:
             # Registra início do processamento
@@ -289,7 +397,7 @@ def main():
                 if st.session_state.mostrar_logs:
                     with st.expander("🔍 Detalhes técnicos do erro", expanded=False):
                         st.code(traceback.format_exc())
-        
+
         # Exibição dos resultados
         if "result" in st.session_state and st.session_state.result.get("output"):
             st.markdown(f"### ✨ Seu Prompt está pronto! ({st.session_state.last_result_time})")
@@ -299,6 +407,17 @@ def main():
             # Exibe os formatos gerados
             for format_name, content in output_data.items():
                 display_formatted_prompt(format_name, content, use_expander=True, key_suffix="main")
+            
+            # Após exibir o prompt gerado
+            with st.expander("Avaliar este prompt"):
+                st.markdown("Quão útil foi este prompt?")
+                cols = st.columns(5)
+                ratings = ["Ruim", "Regular", "Bom", "Muito Bom", "Excelente"]
+                for i, col in enumerate(cols):
+                    with col:
+                        if st.button(ratings[i], key=f"rating_{i}"):
+                            st.session_state.last_rating = i+1
+                            st.write(f"Obrigado pela avaliação: {ratings[i]}")
     
     # Tab de histórico
     with tab2:
@@ -396,14 +515,14 @@ def main():
     with st.sidebar:
         st.header("Sobre")
         st.info("""
-        Este gerador de prompts utiliza:
+    Este gerador de prompts utiliza:
         - **LangChain** para templates e interação com LLMs
         - **LangGraph** para orquestração de fluxos
-        - **Validação de sintaxe** para formatos estruturados
-        
-        O sistema coleta requisitos, planeja e gera o prompt nos formatos solicitados.
-        """)
-        
+    - **Validação de sintaxe** para formatos estruturados
+    
+    O sistema coleta requisitos, planeja e gera o prompt nos formatos solicitados.
+    """)
+    
         # Status do sistema
         st.subheader("Status do Sistema")
         
@@ -426,7 +545,7 @@ def main():
         
         # Créditos
         st.markdown("---")
-        st.caption("Desenvolvido com ❤️ usando Streamlit e LangChain")
+        st.caption("Desenvolvido com ❤️ usando Streamlit e LangChain") 
         st.caption(f"Sessão: {get_session_id()}")
 
 if __name__ == "__main__":

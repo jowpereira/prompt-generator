@@ -111,13 +111,3 @@ Contribuições são bem-vindas! Por favor, sinta-se à vontade para:
 ## 📄 Licença
 
 Este projeto está licenciado sob a [MIT License](LICENSE).
-
-## 👏 Agradecimentos
-
-- OpenAI pela API que alimenta os modelos
-- Equipe Streamlit pelo framework de interface
-- Comunidade LangChain pelos recursos de integração com LLMs
-
----
-
-Desenvolvido com ❤️ para a comunidade de IA.
